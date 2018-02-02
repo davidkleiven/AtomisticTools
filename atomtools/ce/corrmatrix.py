@@ -7,6 +7,7 @@ from matplotlib import pyplot as plt
 
 class CovariancePlot( object ):
     def __init__( self, evaluator, constant_term_column=None ):
+        self.eval = evaluator
         self.cf_mat = evaluator.cf_matrix
 
         if ( not constant_term_column is None ):
@@ -27,4 +28,13 @@ class CovariancePlot( object ):
         cbar.set_label( "Structure correlation" )
         ax.set_xlabel( "Structure number" )
         ax.set_ylabel( "Structure number" )
+        return fig
+
+    def plot_corr_func_coverage(self):
+        fig = plt.figure()
+        ax = fig.add_subplot(1,1,1)
+        for i in range(self.cf_mat.shape[1]):
+            data = np.sort(self.cf_mat[:,i])
+            ax.plot(data, label=self.eval.cluster_names[i] )
+        ax.legend( frameon=False, bbox_to_anchor=(1.05,1.0) )
         return fig
