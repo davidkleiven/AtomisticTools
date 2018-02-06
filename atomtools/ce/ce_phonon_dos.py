@@ -75,6 +75,19 @@ class PhononDOS_DB(object):
         conn.commit()
         conn.close()
 
+    def get_all( self ):
+        """
+        Returns a list of all
+        """
+        maxID = self.get_max_id()
+        allres = []
+        for uid in range(maxID):
+            try:
+                allres.append(self.get(id=uid) )
+            except:
+                pass
+        return allres
+
     def get( self, id=None, name=None, atID=None ):
         """
         Returns the density of states

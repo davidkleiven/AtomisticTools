@@ -30,10 +30,14 @@ class CovariancePlot( object ):
         ax.set_ylabel( "Structure number" )
         return fig
 
-    def plot_corr_func_coverage(self):
+    def plot_corr_func_coverage(self,contains=None):
         fig = plt.figure()
         ax = fig.add_subplot(1,1,1)
         for i in range(self.cf_mat.shape[1]):
+            if ( not contains is None ):
+                if ( not contains in self.eval.cluster_names[i] ):
+                    continue
+            print (np.argsort(self.cf_mat[:,i]))
             data = np.sort(self.cf_mat[:,i])
             ax.plot(data, label=self.eval.cluster_names[i] )
         ax.legend( frameon=False, bbox_to_anchor=(1.05,1.0) )
