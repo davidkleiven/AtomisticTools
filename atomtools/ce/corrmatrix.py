@@ -30,15 +30,40 @@ class CovariancePlot( object ):
         ax.set_ylabel( "Structure number" )
         return fig
 
-    def plot_corr_func_coverage(self,contains=None):
+    def plot_corr_func_coverage(self,nbins=50):
         fig = plt.figure()
         ax = fig.add_subplot(1,1,1)
+        all_data = {}
+        labels = {
+            1:"Singlets",
+            2:"Doublets",
+            3:"Triplets",
+            4:"Quads",
+        }
+        prec = np.linalg.inv(self.cf_mat.T.dot(self.cf_mat))
+        prec_num = np.trace(prec)/self.cf_mat.shape[0]
+        print (prec_num)
         for i in range(self.cf_mat.shape[1]):
-            if ( not contains is None ):
-                if ( not contains in self.eval.cluster_names[i] ):
-                    continue
-            print (np.argsort(self.cf_mat[:,i]))
-            data = np.sort(self.cf_mat[:,i])
-            ax.plot(data, label=self.eval.cluster_names[i] )
-        ax.legend( frameon=False, bbox_to_anchor=(1.05,1.0) )
+            cname = self.eval.cluster_names[i]
+            size = int(cname[1])
+            if ( not size in all_data.keys() ):
+                all_data[size] = []
+            all_data[size] += list(self.cf_mat[:,i])
+        bottom = np.zeros(nbins)
+        bins = np.linspace(-1.0,1.0,nbins+1)
+        bins = bins
+        delta = bins[1]-bins[0]
+        for key,value in all_data.iteritems():
+            if ( key==0 ):
+                continue
+            hist,bins = np.histogram( value, bins=bins )
+            hist = hist.astype(np.float64)
+            hist /= float(np.sum(hist))
+            ax.bar( bins[1:], hist, 0.8*delta, bottom=bottom, label=labels[key] )
+            bottom += hist
+        ax.legend( loc="best", frameon=False )
+        ax.set_xlabel( "Correlation function" )
+        ax.set_ylabel( "Relative occurence" )
+        ax.spines["right"].set_visible(False)
+        ax.spines["top"].set_visible(False)
         return fig
