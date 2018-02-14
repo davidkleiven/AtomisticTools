@@ -1,6 +1,7 @@
 import sqlite3 as sq
 import numpy as np
 import io
+from ase.db import connect
 
 class PhononDOS_DB(object):
     def __init__( self, db_name ):
@@ -148,3 +149,27 @@ class PhononDOS_DB(object):
         out = io.BytesIO(blob)
         out.seek(0)
         return np.load(out)
+
+    def get_all_atIDs( self ):
+        """
+        Returns a list with all atom IDs
+        """
+        all_entries = self.get_all()
+        all_atom_ids = [res["atID"] for res in all_entries]
+        return all_atom_ids
+
+    def sync_with_ase_db( self, ase_db_name ):
+        """
+        Syncronizes this database with another ASE database.
+        Writes all AtomRow objects into this database
+        """
+        all_atom_ids = self.get_all_atIDs()
+        ase_db = connect( ase_db )
+        ase_db_connect_self = connect( self.db_name )
+        num_new_structures = 0
+        for row in ase_db.select():
+            if ( row.id in all_atom_ids ):
+                continue
+            ase_db_connect_self.write( row )
+            num_new_structures += 1
+        print ( "Added %d new structures to the database"%(num_new_structures) )
