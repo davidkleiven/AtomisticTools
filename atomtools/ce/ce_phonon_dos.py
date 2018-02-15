@@ -158,18 +158,38 @@ class PhononDOS_DB(object):
         all_atom_ids = [res["atID"] for res in all_entries]
         return all_atom_ids
 
-    def sync_with_ase_db( self, ase_db_name ):
+    def sync_with_ase_db( self, ase_db_name, selection=[("converged","=",1)] ):
         """
         Syncronizes this database with another ASE database.
         Writes all AtomRow objects into this database
         """
+        raise NotImplementedError( "This function does not work yet!" )
         all_atom_ids = self.get_all_atIDs()
-        ase_db = connect( ase_db )
-        ase_db_connect_self = connect( self.db_name )
+        ase_db = connect( ase_db_name )
+        ase_db_connection_self = connect( self.db_name )
         num_new_structures = 0
-        for row in ase_db.select():
+        id_converter = {}
+        for row in ase_db.select(selection):
             if ( row.id in all_atom_ids ):
                 continue
-            ase_db_connect_self.write( row )
+            kvp = row.key_value_pairs
+            atoms = ase_db.get_atoms(id=row.id)
+            newID = ase_db_connection_self.write( atoms, key_value_pairs=kvp )
+            id_converter[newID] = row.id
+            # TODO: Write the new atom objects here
             num_new_structures += 1
+
+        # Have to convert the IDs ASE created back to the original ones
+        conn = sq.connect( self.db_name )
+        cur = conn.cursor()
+        sql = "from systems select id"
+        cur.execute( sql )
+        entries = cur.fetchall()
+        for entry in entries:
+            if ( entry[0] in id_converter.keys() ):
+                sql = "update systems set id=? where id=?"
+                cur.execute( sql, (id_converter[entry[0]], entry[0]) )
+        conn.commit()
+        cur.close()
+        conn.close()
         print ( "Added %d new structures to the database"%(num_new_structures) )
