@@ -1,14 +1,19 @@
 from matplotlib import pyplot as plt
 import numpy as np
-from ase.units import kB, _hbar, _c, eV
+from ase.units import kB, kg, _hbar, _c, eV, _amu, J, Angstrom
 from scipy.optimize import minimize
 from ase.data import atomic_masses, atomic_numbers
 
 class EquationOfState(object):
-    def __init__( self, volume, energy ):
+    def __init__( self, volume, energy, debye_scheme="mjs" ):
         self.volume = volume
         self.energy = energy
-        self.avg_mass = None
+        self.tot_mass = None
+        self.natoms = 1
+        allowed_debye_schemes = ["none","mjs"]
+        if ( debye_scheme not in allowed_debye_schemes ):
+            raise ValueError( "Debye Scheme has to be one of {}".format(allowed_debye_schemes) )
+        self.debye_scheme = debye_scheme
 
     def evaluate( self, V ):
         raise NotImplementedError( "This function has to be implemented in subclasses" )
@@ -51,10 +56,19 @@ class EquationOfState(object):
         """
         Compute the density based on the reference density
         """
-        if ( self.avg_mass is None ):
+        if ( self.tot_mass is None ):
             raise ValueError( "Average mass is not known" )
-        rho = self.avg_mass/V
+        rho = self.tot_mass/V
         return rho
+
+    def density_g_per_cm3( self, V ):
+        """
+        Returns the density in g/cm^3
+        """
+        rho = self.density(V)
+        rho /= kg
+        rho *= 1E30
+        return rho/1000.0
 
     def set_average_mass( self, atoms ):
         """
@@ -63,10 +77,12 @@ class EquationOfState(object):
         n_tot = 0
         for key,value in atoms.iteritems():
             n_tot += value
-        avg_mass = 0.0
+        self.natoms = n_tot
+        tot_mass = 0.0
         for key,value in atoms.iteritems():
-            avg_mass += value*atomic_masses[atomic_numbers[key]]
-        self.avg_mass = avg_mass/n_tot
+            tot_mass += value*atomic_masses[atomic_numbers[key]]
+        self.tot_mass = tot_mass
+        #print (self.avg_mass)
 
     def debye_frequency( self, V ):
         """
@@ -74,13 +90,36 @@ class EquationOfState(object):
         """
         B = self.bulk_modulus(V)
         rho = self.density(V)
-        u =  931.4941E6 # eV/c^2
-        rho *= u
-        omega_D = (6.0*np.pi**2)**(1.0/3.0) * V**(-1.0/3.0) * np.sqrt( B/rho )
-        omega_D *= _c*1E10*_hbar
-        eV_si = 1.6021766208E-19 # eV/J
-        omega_D /= eV_si
-        return omega_D # In eV
+        rho /= kg # Unit of rho is now kg/(angstrom^3)
+        B /= J # J/angstrom^3
+        omega_D = (6.0*np.pi**2)**(1.0/3.0) * V**(-1.0/3.0) * np.sqrt( B/rho )*1E10 # Unit of omega_D: rad/s
+        v_sound = self.speed_of_sound(V)
+        number_density = self.natoms/V
+        omega_D = (6.0*np.pi**2 *number_density)**(1.0/3.0) * v_sound*1E10
+        omega_D *= _hbar*J
+
+        if ( self.debye_scheme == "none" ):
+            return omega_D # In eV
+        elif ( self.debye_scheme == "mjs" ):
+            # See: Moruzzi, V.; Janak, J. & Schwarz, K. Calculated thermal properties of metals Physical Review B, APS, 1988, 37, 790
+            return 0.617*omega_D
+        raise ValueError( "Unknown debye scheme!" )
+
+    def debye_temperature( self, V ):
+        """
+        Computes the Debye temperature
+        """
+        return self.debye_frequency(V)/kB
+
+    def speed_of_sound( self, V ):
+        """
+        Computes the speed of sound in meter per second
+        """
+        B = self.bulk_modulus(V)
+        rho = self.density(V)
+        rho /= kg
+        B /= J
+        return np.sqrt(B/rho)
 
     def phonon_free_energy_high_temp( self, debye_freq, T ):
         """
@@ -95,7 +134,7 @@ class EquationOfState(object):
         indx = np.argmin(self.energy)
         V0 = self.volume[indx]
         res = minimize( self.evaluate, V0 )
-        return res["fun"]
+        return res["fun"], res["x"][0]
 
     def beta_elastic_vib_free_energy( self, T, vol_curve=None, natoms=1 ):
         """
@@ -110,7 +149,7 @@ class EquationOfState(object):
             debye = self.debye_frequency(V)
             fvib.append( self.phonon_free_energy_high_temp(debye,temp) )
 
-        Emin = self.minimum_energy()/natoms
+        Emin = self.minimum_energy()[0]/natoms
         E = elastic-Emin + np.array(fvib)
         if ( len(T) == 1 ):
             return E[0]/(kB*T[0])
