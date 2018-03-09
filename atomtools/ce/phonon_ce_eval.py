@@ -14,6 +14,7 @@ from scipy.integrate import simps
 from atomtools.eos.birch_murnagan import BirschMurnagan
 from ase.db import connect
 from matplotlib import pyplot as plt
+from ase.visualize import view
 
 class PhononEvalEOS( ev.Evaluate ):
     def __init__(self, BC, phonon_dbname, cluster_names=None, select_cond=None, lamb=0.0, penalty=None ):
