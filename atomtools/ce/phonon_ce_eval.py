@@ -25,6 +25,7 @@ class PhononEvalEOS( ev.Evaluate ):
         self.atoms_count = {}
         self.tot_number_of_atoms = {}
         self.BC = BC
+        self.gid_in_order = []
         ev.Evaluate.__init__( self, BC, cluster_names=cluster_names, lamb=float(lamb), penalty=penalty )
 
     def _make_cf_matrix( self ):
@@ -33,7 +34,13 @@ class PhononEvalEOS( ev.Evaluate ):
         """
         cf_matrix = []
         cf = CorrFunction( self.BC )
+        self.gid_in_order = []
         for row in self.ph_db.select():
+            if ( row.get("energy") is None ):
+                continue
+            if ( "groupID" not in row.key_value_pairs.keys() ):
+                continue
+
             gid = row.key_value_pairs["groupID"]
             if ( gid in self.volume.keys() ):
                 self.volume[gid].append( row.volume )
@@ -43,16 +50,20 @@ class PhononEvalEOS( ev.Evaluate ):
                 self.energy[gid] = [row.energy]
                 self.atoms_count[gid] = row.count_atoms()
                 self.tot_number_of_atoms[gid] = row.natoms
-                atoms = self.ph_db.get_atoms(id=row.id)
+                atoms = row.toatoms()
+                """
                 if ( len(atoms) == 1 ):
                     atoms = atoms*(4,4,4)
                 elif ( len(atoms) == 8 ):
                     atoms = atoms*(2,2,2)
                 else:
-                    raise ValueError( "Can only handle cases where the atoms object contains 1 or 8 atoms!" )
-                atoms.set_cell( self.BC.atoms.get_cell(), scale_atoms=True )
+                    raise ValueError( "Can only handle cases where the atoms object contains 1 or 8 atoms!"
+                """
+                #atoms.set_cell( self.BC.atoms.get_cell(), scale_atoms=True )
                 corr_funcs = cf.get_cf_by_cluster_names( atoms, self.cluster_names )
                 cf_matrix.append( [corr_funcs[x] for x in self.cluster_names] )
+                if ( gid not in self.gid_in_order ):
+                    self.gid_in_order.append(gid)
         return np.array( cf_matrix, dtype=float )
 
     def _get_dft_energy_per_atom(self):
@@ -61,13 +72,17 @@ class PhononEvalEOS( ev.Evaluate ):
         to elastic and vibrational energy
         """
         e_dft = []
-        for key in self.atoms_count.keys():
+        #for key in self.atoms_count.keys():
+        for key in self.gid_in_order:
             eos = BirschMurnagan( np.array(self.volume[key]), np.array(self.energy[key]) )
             eos.set_average_mass( self.atoms_count[key] )
             fvib_el = eos.beta_elastic_vib_free_energy( [self.temperature], natoms=self.tot_number_of_atoms[key] )
+            #V = eos.volume_temperature( [self.temperature], self.tot_number_of_atoms[key] )
+            #print (V/self.tot_number_of_atoms[key],self.tot_number_of_atoms[key])
+            #fvib_el = eos.debye_temperature(V)
             e_dft.append(fvib_el)
         self.e_dft = np.array( e_dft )
-        self.e_dft -= np.min(self.e_dft)
+        #self.e_dft -= np.min(self.e_dft)
         return True
 
     @property
