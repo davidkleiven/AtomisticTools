@@ -17,7 +17,7 @@ class SaveRestartFiles(object):
         """
         Returns the filename that will be used in the simulations
         """
-        return fname = "calc_restart{}.gpw".format(name)
+        return "calc_restart{}.gpw".format(name)
 
     def __call__(self):
         """
