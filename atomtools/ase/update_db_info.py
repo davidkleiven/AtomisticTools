@@ -1,27 +1,30 @@
 
+from ase.db import connect
+
 class UpdateDBInfo(object):
     """
     Updates information in a database of atoms
     """
-    def __init__( self, db_name, uid ):
+    def __init__( self, db_name, uid, atoms ):
         """
         Updates the database with info during run
         """
         self.db_name = db_name
         self.uid = uid
+        self.atoms = atoms
 
-    def __call__( self, atoms ):
-        energy = atoms.get_potential_energy()
+    def __call__( self ):
+        energy = self.atoms.get_potential_energy()
         stress = 0.0
         try:
-            stresses = atoms.get_stress()
+            stresses = self.atoms.get_stress()
             stress = np.max(stresses)
         except:
             pass
 
         fmax = 0.0
         try:
-            force = atoms.get_forces()
+            force = self.atoms.get_forces()
             f = np.sqrt( np.sum( force**2, axis=1 ) )
             fmax = np.max(f)
         except:
@@ -35,4 +38,4 @@ class UpdateDBInfo(object):
             update = ( energy < kvp["min_energy"] )
 
         if ( update ):
-            db.update( id=uid, min_energy=energy, max_stress=stress, max_force=fmax )
+            db.update( self.uid, min_energy=energy, max_stress=stress, max_force=fmax )
