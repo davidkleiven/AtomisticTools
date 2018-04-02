@@ -18,6 +18,9 @@ class PopulationVariance( object ):
         self.bc.atoms.set_calculator(self.calc)
         self.elements = self.bc.site_elements[0] # This should be updated to handle different site types
         self.status_every_sec = 30
+        N_cf = len(ecis.keys())
+        self.cov_matrix = np.zeros((N,N))
+        self.exp_value = np.zeros(N)
 
     def swap_random_atoms( self ):
         indx = np.random.randint(low=0,high=len(self.bc.atoms))
@@ -45,11 +48,11 @@ class PopulationVariance( object ):
                 self.swap_random_atoms()
             new_cfs = self.calc.get_cf()
             cf_array = [new_cfs[key] for key in self.init_cf.keys()] # Make sure that the order is the same as in init_cf
-            cfs.append( cf_array )
+            self.update_cov_matrix( cf_array )
 
         cfs = np.array( cfs )
-        cov = np.cov( cfs.T )
-        mu = np.mean( cfs, axis=0 )
+        cov = self.cov_matrix/n_probe_structures
+        mu = self.exp_value/n_probe_structures
 
         # Create dictionaries
         keys = self.init_cf.keys()
@@ -68,3 +71,11 @@ class PopulationVariance( object ):
                 json.dump( data, outfile )
             print ( "Covariance and mean of the correlation functions are written to {}".format(fname) )
         return cov_dict, mu_dict
+
+    def update_cov_matrix( self, new_cfs ):
+        """
+        Updates the covariance matrix
+        """
+        outer = np.outer( new_cfs, new_cfs )
+        self.cov_matrix += outer
+        self.mu += np.array( new_cfs )
