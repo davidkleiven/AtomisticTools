@@ -17,9 +17,9 @@ class PopulationVariance( object ):
         ecis = {key:1.0 for key in self.init_cf.keys()} # ECIs do not matter here
         self.calc = CE( self.bc, ecis, initial_cf=self.init_cf )
         self.bc.atoms.set_calculator(self.calc)
-        self.elements = self.bc.site_elements[0] # This should be updated to handle different site types
+        self.elements = self.bc.basis_elements[0] # This should be updated to handle different site types
         self.status_every_sec = 30
-        N_cf = len(ecis.keys())
+        N = len(ecis.keys())-1
         self.cov_matrix = np.zeros((N,N))
         self.exp_value = np.zeros(N)
 
@@ -35,13 +35,10 @@ class PopulationVariance( object ):
         system_change = [(indx,symb,new_symb)]
         self.bc.atoms._calc.calculate( self.bc.atoms, ["energy"], system_change )
 
-    def estimate( self, n_probe_structures=10000, fname="", ret_type="dict" ):
+    def estimate( self, n_probe_structures=10000, fname="" ):
         """
         Estimate the covariance matrix
         """
-        allowed_ret_types = ["array","dict"]
-        if ( ret_type not in allowed_ret_types ):
-            raise ValueError( "Return type has to be one of {}".format(ret_type) )
 
         if ( fname != "" ):
             if ( not fname.endswith(".json") ):
@@ -58,34 +55,30 @@ class PopulationVariance( object ):
             for i in range(len(self.bc.atoms)):
                 self.swap_random_atoms()
             new_cfs = self.calc.get_cf()
-            cf_array = [new_cfs[key] for key in self.init_cf.keys()] # Make sure that the order is the same as in init_cf
+            cf_array = [new_cfs[key] for key in self.init_cf.keys() if key != "c0"] # Make sure that the order is the same as in init_cf
             self.update_cov_matrix( cf_array )
 
         cfs = np.array( cfs )
         cov = self.cov_matrix/n_probe_structures
         mu = self.exp_value/n_probe_structures
         cov -= np.outer(mu,mu)
+        return cov,mu
 
-        if ( ret_type == "array" ):
-            return cov,mu
-
+    def array2dict( self, cov, mu ):
+        """
+        Converts an array to a dictionary
+        """
         # Create dictionaries
         keys = self.init_cf.keys()
+        del keys[keys.index("c0")]
         mu_dict = {keys[i]:mu[i] for i in range(len(keys))}
 
         cov_dict = {key:{} for key in keys}
         for i in range(len(keys)):
             for j in range(len(keys)):
                 cov_dict[keys[i]][keys[j]] = cov[i,j]
-
-        if ( fname != "" ):
-            data = {}
-            data["cov"] = cov_dict
-            data["mean"] = mu_dict
-            with open(fname, 'w') as outfile:
-                json.dump( data, outfile )
-            print ( "Covariance and mean of the correlation functions are written to {}".format(fname) )
         return cov_dict, mu_dict
+
 
     def update_cov_matrix( self, new_cfs ):
         """
@@ -93,7 +86,7 @@ class PopulationVariance( object ):
         """
         outer = np.outer( new_cfs, new_cfs )
         self.cov_matrix += outer
-        self.mu += np.array( new_cfs )
+        self.exp_value += np.array( new_cfs )
 
     def diagonalize( self, cov, plot=False ):
         """
@@ -103,11 +96,11 @@ class PopulationVariance( object ):
 
         # Sort accorting to eigenvalues
         srt_indx = np.argsort( eigval )[::-1]
-        eigval = [eigval[indx] for indx in srt_indx]
-        eigvec = np.array( [eigvec[:,indx] for indx in srt_indx] )
+        eigval_srt = [eigval[indx] for indx in srt_indx]
+        eigvec_srt = np.array( [eigvec[:,indx] for indx in srt_indx] ).T
 
-        cumsum_eig = np.cumsum( eigval )
-        tot_sum = np.sum(eigval)
+        cumsum_eig = np.cumsum( eigval_srt )
+        tot_sum = np.sum(eigval_srt)
 
         if ( plot ):
             x_val = np.arange(len(eigval))
@@ -117,3 +110,48 @@ class PopulationVariance( object ):
             ax.set_xlabel( "Number of eigenvectors" )
             ax.set_ylabel( "Normalized variance" )
         return eigval, eigvec
+
+    def plot_eigen( self, eigenvalues, eigenvectors ):
+        """
+        Creates a visualization of the eigenvectors and the eigenvalues
+        NOTE: Eigenvalues and eigenvectors must NOT be sorted. They have
+              to be given in the same order as returned by diagonalize
+        """
+        keys = self.init_cf.keys()
+        del keys[keys.index("c0")]
+        srt_indx = np.argsort(eigenvalues)[::-1]
+        key_srt = [keys[indx] for indx in srt_indx]
+        eigval_srt = [eigenvalues[indx] for indx in srt_indx]
+        eigvec_srt = np.array( [eigenvectors[:,indx] for indx in srt_indx] ).T
+
+        grid_kw = {"hspace":0.0,"height_ratios":[1,4]}
+        fig, ax = plt.subplots(nrows=2,sharex=True,gridspec_kw=grid_kw)
+        x = np.arange(len(eigvec_srt))
+        cumsum = np.cumsum(eigval_srt)
+        tot_sum = np.sum(eigval_srt)
+        ax[0].plot( x, cumsum/tot_sum, ls="steps")
+        keys_srt, eigvec_srt = self.sort_eigenvectors_by_size( keys, eigvec_srt )
+        ax[1].imshow( eigvec_srt, cmap="coolwarm", aspect="auto" )
+        print (eigvec_srt[:,0])
+
+        # Separation lines to separate different sizes
+        hlines = []
+        size = 2
+        for i,name in enumerate(keys_srt):
+            prefix = "c{}".format(size)
+            if ( name.startswith(prefix) ):
+                hlines.append(i)
+                size += 1
+
+        for line in hlines:
+            ax[1].axhline( line )
+        return fig
+
+    def sort_eigenvectors_by_size( self, keys, eigvec ):
+        """
+        Sort the eigenvector values
+        """
+        srt_indx = np.argsort(keys)
+        keys_srt = [keys[indx] for indx in srt_indx]
+        eigvec_srt = np.array( [eigvec[indx,:] for indx in srt_indx] )
+        return keys_srt, eigvec_srt
