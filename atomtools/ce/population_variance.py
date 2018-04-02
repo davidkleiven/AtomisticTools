@@ -3,6 +3,7 @@ from ase.ce.corrFunc import CorrFunction
 import numpy as np
 import time
 import json
+from matplotlib import pyplot as plt
 
 class PopulationVariance( object ):
     """
@@ -23,6 +24,9 @@ class PopulationVariance( object ):
         self.exp_value = np.zeros(N)
 
     def swap_random_atoms( self ):
+        """
+        Changes the symbol of a random atom
+        """
         indx = np.random.randint(low=0,high=len(self.bc.atoms))
         symb = self.bc.atoms[indx].symbol
         new_symb = symb
@@ -90,3 +94,26 @@ class PopulationVariance( object ):
         outer = np.outer( new_cfs, new_cfs )
         self.cov_matrix += outer
         self.mu += np.array( new_cfs )
+
+    def diagonalize( self, cov, plot=False ):
+        """
+        Diagonalize the covariance matrix
+        """
+        eigval, eigvec = np.linalg.eig( cov )
+
+        # Sort accorting to eigenvalues
+        srt_indx = np.argsort( eigval )[::-1]
+        eigval = [eigval[indx] for indx in srt_indx]
+        eigvec = np.array( [eigvec[:,indx] for indx in srt_indx] )
+
+        cumsum_eig = np.cumsum( eigval )
+        tot_sum = np.sum(eigval)
+
+        if ( plot ):
+            x_val = np.arange(len(eigval))
+            fig = plt.figure()
+            ax = fig.add_subplot(1,1,1)
+            ax.plot( x_val, cumsum_eig/tot_sum, ls="steps" )
+            ax.set_xlabel( "Number of eigenvectors" )
+            ax.set_ylabel( "Normalized variance" )
+        return eigval, eigvec
