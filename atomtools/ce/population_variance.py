@@ -31,7 +31,14 @@ class PopulationVariance( object ):
         system_change = [(indx,symb,new_symb)]
         self.bc.atoms._calc.calculate( self.bc.atoms, ["energy"], system_change )
 
-    def estimate( self, n_probe_structures=10000, fname="" ):
+    def estimate( self, n_probe_structures=10000, fname="", ret_type="dict" ):
+        """
+        Estimate the covariance matrix
+        """
+        allowed_ret_types = ["array","dict"]
+        if ( ret_type not in allowed_ret_types ):
+            raise ValueError( "Return type has to be one of {}".format(ret_type) )
+
         if ( fname != "" ):
             if ( not fname.endswith(".json") ):
                 raise ValueError( "The program is going to write a json file so the file extension should be .json" )
@@ -53,6 +60,10 @@ class PopulationVariance( object ):
         cfs = np.array( cfs )
         cov = self.cov_matrix/n_probe_structures
         mu = self.exp_value/n_probe_structures
+        cov -= np.outer(mu,mu)
+
+        if ( ret_type == "array" ):
+            return cov,mu
 
         # Create dictionaries
         keys = self.init_cf.keys()
