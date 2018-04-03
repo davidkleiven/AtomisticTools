@@ -1,7 +1,13 @@
 import unittest
 import matplotlib as mpl
 mpl.use("Agg") # This does not require any screen
-from atomtools.ce.eciplotter import ECIPlotter
+msg = ""
+try:
+    from atomtools.ce.eciplotter import ECIPlotter
+    available = True
+except ImportError as exc:
+    available = False
+    msg = str(exc)
 
 ecis = {
     "c1_1":1.0,
@@ -11,6 +17,9 @@ ecis = {
 }
 class TestECIPlotter(unittest.TestCase):
     def test_plot(self):
+        if ( not available ):
+            self.skipTest( "Test not available: {}".format(msg) )
+            return
         no_throw = True
         try:
             plotter = ECIPlotter(ecis)

@@ -1,11 +1,20 @@
 import unittest
-from atomtools.ce import ce_phonon_dos as cpd
+msg = ""
+try:
+    from atomtools.ce import ce_phonon_dos as cpd
+    available = True
+except ImportError as exc:
+    available = False
+    msg = str(exc)
 import numpy as np
 import os
 
 db_name = "test_phonon.db"
 class TestPhononDB(unittest.TestCase):
     def test_save_load(self):
+        if ( not available ):
+            self.skipTest("Test not available: {}".format(msg))
+            return
         manager = cpd.PhononDOS_DB(db_name)
         omega = np.linspace(0.0,100.0,10)
         dos = omega**2
