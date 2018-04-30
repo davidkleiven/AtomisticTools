@@ -1,5 +1,5 @@
 import unittest
-from atomtools.ase import rotate_atoms_and_cell
+from atomtools.ase import rotate_atoms_and_cell, rotate_crd_system
 from ase import build
 
 class TestRotateAtoms( unittest.TestCase ):
@@ -10,7 +10,8 @@ class TestRotateAtoms( unittest.TestCase ):
         no_throw = True
         for zdir in target_z_dirs:
             try:
-                rotate_atoms_and_cell( atoms, target_z_direction=zdir )
+                atoms_return = rotate_atoms_and_cell(atoms=atoms, target_direction=zdir )
+                atoms_return = rotate_crd_system( atoms=atoms, target_z_direction=zdir )
             except RuntimeError as exc:
                 msg = str(exc)
                 no_throw = False
