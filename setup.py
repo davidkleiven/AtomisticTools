@@ -4,5 +4,6 @@ setup(
     name="atomtools",
     author="David Kleiven",
     version=1.0,
-    packages=find_packages()
+    packages=find_packages(),
+    scripts=["bin/viewdb.py"]
 )
