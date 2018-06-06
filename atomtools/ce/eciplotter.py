@@ -72,4 +72,8 @@ def cluster_dia_from_name( cname ):
         return 0.0
 
     splitted = cname.split("_")
+    if ( splitted[1].find("p") != -1 ):
+        float_version = float( splitted[1].replace("p",".") )
+        return int(float_version*100)
+
     return int(splitted[1])

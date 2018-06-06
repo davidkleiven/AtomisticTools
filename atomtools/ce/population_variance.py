@@ -4,6 +4,7 @@ import numpy as np
 import time
 import json
 from matplotlib import pyplot as plt
+import h5py as h5
 
 class PopulationVariance( object ):
     """
@@ -29,9 +30,7 @@ class PopulationVariance( object ):
         """
         indx = np.random.randint(low=0,high=len(self.bc.atoms))
         symb = self.bc.atoms[indx].symbol
-        new_symb = symb
-        while( new_symb == symb ):
-            new_symb = self.elements[np.random.randint(low=0,high=len(self.elements))]
+        new_symb = self.elements[np.random.randint(low=0,high=len(self.elements))]
         system_change = [(indx,symb,new_symb)]
         self.bc.atoms._calc.calculate( self.bc.atoms, ["energy"], system_change )
 
@@ -88,11 +87,33 @@ class PopulationVariance( object ):
         self.cov_matrix += outer
         self.exp_value += np.array( new_cfs )
 
+    def save( self, eigval, eigvec, fname="eigenvectors.h5", fraction=0.95 ):
+        """
+        Store the lowest fraction of the eigenvectors
+        """
+        srt_indx = np.argsort( eigval )[::-1]
+        eigval_srt = [eigval[indx] for indx in srt_indx]
+        eigvec_srt = np.array( [eigvec[:,indx] for indx in srt_indx] ).T
+        cumsum_eig = np.cumsum( eigval_srt )
+        tot_sum = np.sum(eigval_srt)
+
+        relative_sum = cumsum_eig/tot_sum
+
+        max_indx = np.argmin( np.abs(relative_sum-fraction) )
+        matrix = eigvec_srt[:,:max_indx]
+        eigen = eigval_srt[:max_indx]
+        with h5.File( fname, 'w' ) as hf:
+            dset_vec = hf.create_dataset( "eigenvectors", data=matrix )
+            dset_eigen = hf.create_dataset( "eigenvalues", data=eigen )
+            dset_eigen.attrs["fraction"] = fraction
+
+        print ( "Result written to {}".format(fname) )
+
     def diagonalize( self, cov, plot=False ):
         """
         Diagonalize the covariance matrix
         """
-        eigval, eigvec = np.linalg.eig( cov )
+        eigval, eigvec = np.linalg.eigh( cov )
 
         # Sort accorting to eigenvalues
         srt_indx = np.argsort( eigval )[::-1]
@@ -131,7 +152,7 @@ class PopulationVariance( object ):
         tot_sum = np.sum(eigval_srt)
         ax[0].plot( x, cumsum/tot_sum, ls="steps")
         keys_srt, eigvec_srt = self.sort_eigenvectors_by_size( keys, eigvec_srt )
-        ax[1].imshow( eigvec_srt, cmap="coolwarm", aspect="auto" )
+        #ax[1].imshow( eigvec_srt, cmap="coolwarm", aspect="auto" )
         print (eigvec_srt[:,0])
 
         # Separation lines to separate different sizes

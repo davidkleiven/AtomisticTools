@@ -48,5 +48,20 @@ def rotate_crd_system( atoms=None, target_z_direction=(0,0,1) ):
     rot_axis = np.cross(target_z_direction,orig_z_direction)
     rot_axis /= np.sqrt( np.sum(rot_axis**2) )
     angle = np.arccos( orig_z_direction.dot(target_z_direction) )
-    atoms.rotate( -angle*180.0/np.pi, v=rot_axis )
+    atoms.rotate( -angle*180.0/np.pi, v=rot_axis, rotate_cell=True )
+    return atoms
+
+def align_direction_with_z( atoms=None, direction=(0,0,1) ):
+    """
+    Rotates the atoms cell such that the direction specified is oriented along the z axis
+    """
+    cell = atoms.get_cell().T
+    dir_to_align = direction[0]*cell[:,0] + direction[1]*cell[:,1] + direction[2]*cell[:,2]
+    dir_to_align /= np.sqrt( np.sum(dir_to_align**2) )
+
+    zhat = np.array( [0,0,1] )
+    rot_axis = np.cross( zhat, dir_to_align )
+    rot_axis /= np.sqrt( np.sum(rot_axis**2) )
+    angle = np.arccos( zhat.dot(rot_axis) )
+    atoms.rotate( -angle*180.0/np.pi, v=rot_axis, rotate_cell=True )
     return atoms
