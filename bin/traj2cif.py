@@ -7,11 +7,15 @@ def main(fname=None, ext="cif"):
     if fname is None:
         raise ValueError("No file name given")
 
-    folder_name = fname.rpartition(".")
-    os.mkdir(folder_name)
+    folder_name = fname.rpartition(".")[0]
+    try:
+        os.mkdir(folder_name)
+    except OSError:
+        pass
     traj = Trajectory(fname)
     for i,atom in enumerate(traj):
         atoms_file = folder_name+"/atoms{}.{}".format(i,ext)
+        write(atoms_file,atom)
     print ("Atoms written to {}".format(folder_name))
 
 def print_usage(known_args):
@@ -28,11 +32,11 @@ if __name__ == "__main__":
         arg_found = False
         for cand_arg in known_args:
             if arg.find("--{}=".format(cand_arg)) != -1:
-                kwargs[cand_arg] = arg.split("--{}=".format(cand_arg))[1]
+                kwargs[cand_arg] = str(arg.split("--{}=".format(cand_arg))[1])
                 arg_found = True
                 break
         if not arg_found:
-            def print_usage(known_args)
+            print_usage(known_args)
             raise ValueError("Unknown argument {}. Known arguments: {}".format(arg,known_args))
 
     main(**kwargs)
