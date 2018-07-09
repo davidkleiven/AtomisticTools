@@ -2,10 +2,11 @@ from ase.db import connect
 import numpy as np
 
 class ElasticConstants(object):
-    def __init__(self, atoms):
+    def __init__(self, atoms, db_name):
         """Class that estimate the elastic parameters
 
-        :param atoms: Relaxed (zero stress) configuration
+        :param atoms: Relaxed atoms object
+        :param db_name: Database name of structures that needs to be computed
         """
         self.atoms = atoms
 
@@ -13,6 +14,7 @@ class ElasticConstants(object):
         self.delta_shear = [-0.06, -0.03, 0.03, 0.06]
         self.data = []
         self.elastic_tensor = None
+        self.db_name = db_name
 
     def _to_voigt(self, tensor):
         """Convert tensor to Voigt notation"""
@@ -29,6 +31,8 @@ class ElasticConstants(object):
         """Compute the energy for the non shear configurations"""
 
         I = np.identity(3)
+        db = connect(self.db_name)
+        strain_type = 0
         for delta in self.delta_no_shear:
             for i in range(3):
                 atoms = self.atoms.copy()
@@ -41,17 +45,16 @@ class ElasticConstants(object):
                 # Scale i-th component of each lattice vector
                 cell = cell.dot(F)
                 atoms.set_cell(cell, scale_atoms=True)
-                stress = atoms.get_stress()
-                result = {
-                    "stress":stress,
-                    "strain":self._to_voigt(strain)
-                }
-                self.data.append(result)
+                kvp = {"strain_type":strain_type}
+                strain = self._to_voigt(strain)
+                db.write(atoms, data={"strain":strain}, key_value_pairs=kvp)
 
     def _compute_shear(self):
         """Compute the stresses for sheared configurations"""
         I = np.identity(3)
         element = [(0, 1), (0, 2), (1, 2)]
+        db = connect(self.db_name)
+        strain_type = 3
         for delta in self.delta_shear:
             for e in element:
                 atoms = self.atoms.copy()
@@ -62,19 +65,38 @@ class ElasticConstants(object):
                 cell = atoms.get_cell()
                 cell = cell.dot(F)
                 atoms.set_cell(cell, scale_atoms=True)
-                stress = atoms.get_stress()
-                result = {
-                    "strain":self._to_voigt(strain),
-                    "stress":stress
-                }
-                self.data.append(result)
+                kvp = {"strain_type":strain_type}
+                strain = self._to_voigt(strain)
+                db.write(atoms, data={"strain":strain}, key_value_pairs=kvp)
+                strain_type += 1
 
-    def get(self, restart=False):
-        """Computes the elastic properties"""
-        if restart:
-            self.data = []
+    def prepare_db(self):
+        """Puts entries into the database which needs to be evaluated with
+        DFT"""
         self._compute_no_shear()
         self._compute_shear()
+
+    def run(self, uid, calc):
+        """Run one job"""
+        db = connect(self.db_name)
+        row = db.get(id=uid)
+        strain = row.data["strain"]
+        kvp = row.key_value_pairs
+        atoms = db.get_atoms(id=uid)
+        atoms.set_calculator(calc)
+        stress = atoms.get_stress()
+        del db[uid]
+        db.write(atoms, data={"stress":stress, "strain":strain},
+                 key_value_pairs=kvp)
+
+    def get(self, select_cond=[]):
+        """Computes the elastic properties"""
+        db = connect(self.db_name)
+        self.data = []
+        for row in db.select():
+            d = row.data
+            d["strain_type"] = row.key_value_pairs["strain_type"]
+            self.data.append(d)
 
         stress_matrix = np.zeros((6, len(self.data)))
         strain_matrix = np.zeros_like(stress_matrix)
