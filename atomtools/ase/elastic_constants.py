@@ -107,9 +107,10 @@ class ElasticConstants(object):
         self.elastic_tensor = stress_matrix.dot(np.linalg.pinv(strain_matrix))
         return self.elastic_tensor
 
+    @property
     def compliance_tensor(self):
         """Returns the compliance tensor"""
-        return 1.0/self.elastic_tensor
+        return np.linalg.inv(self.elastic_tensor)
 
     def _bulk_mod_voigt(self):
         """Bulk modulus by the Voigt average"""
@@ -121,7 +122,7 @@ class ElasticConstants(object):
 
     def _bulk_mode_reuss(self):
         """Bulk modulus by the reuss average"""
-        S = self.compliance_tensor()
+        S = self.compliance_tensor
         inv_KR = S[0, 0] + S[1, 1] + S[2, 2]
         inv_KR += 2.0*(S[0, 1] + S[1, 2] + S[2, 0])
         kR = 1.0/inv_KR
@@ -137,7 +138,7 @@ class ElasticConstants(object):
 
     def _shear_mod_reuss(self):
         """Shear modulus by Reuss average"""
-        S = self.compliance_tensor()
+        S = self.compliance_tensor
         inv_Gr = 4.0*(S[0, 0] + S[1, 1] + S[2, 2])
         inv_Gr -= 4.0*(S[0, 1] + S[1, 2] + S[2, 0])
         inv_Gr += 3.0*(S[3, 3] + S[4, 4] + S[5, 5])
@@ -176,5 +177,5 @@ class ElasticConstants(object):
     def poisson_ratio(self):
         """Compute the isotropic Poisson ratio"""
         K_vrh = self.bulk_modulus(mode="VRH")
-        G_vrh = self.bulk_modulus(mode="VRH")
+        G_vrh = self.shear_modulus(mode="VRH")
         return (3.0*K_vrh - 2.0*G_vrh)/(6.0*K_vrh + 2.0*G_vrh)
