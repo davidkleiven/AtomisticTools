@@ -185,3 +185,27 @@ class ElasticConstants(object):
         K_vrh = self.bulk_modulus(mode="VRH")
         G_vrh = self.shear_modulus(mode="VRH")
         return (3.0*K_vrh - 2.0*G_vrh)/(6.0*K_vrh + 2.0*G_vrh)
+
+    @staticmethod
+    def get_strain(ref_cell, strained_cell, principal=False):
+        """Compute the eigenstrain of the strained cell.
+
+        The eigenstrain is defined as the strain of strained_cell if put
+        into the shape of ref_cell. Hence,
+        ref_cell = (I + <strain tensor>) * <strained_cell>
+
+        NOTE: Cell vectors are assumed to by column vectors of the two cells
+        :param ref_cell: Reference cell 3x3 matrix
+        :param strained_cell: Cell to be deformed 3x3 matrix
+        """
+        matrix = ref_cell.dot(np.linalg.inv(strained_cell))
+        identity = np.identity(3)
+        strain = matrix - identity
+
+        # Verify that the strain matrix is symmetric
+        assert np.allclose(strain, strain.T)
+
+        if not principal:
+            return strain
+
+        return np.linalg.eigh(strain)

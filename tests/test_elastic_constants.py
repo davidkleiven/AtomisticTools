@@ -1,23 +1,33 @@
+"""Unit tests for the elastic constants."""
 import unittest
-from ase.calculators.emt import EMT
 from ase.build import bulk
 from atomtools.ase import ElasticConstants
 from ase.calculators.calculator import Calculator
 import numpy as np
 import os
 
-# Implement dymmy calculator that supports get_stress
+
 class DummyCalc(Calculator):
+    """Dummy calculator for extracting stress."""
+
     implemented_properties = ["stress"]
+
     def calculate(self, atoms, properties, system_changes):
-        super(DummyCalc, self).calculate(atoms, properties, system_changes)
+        """Override calculator method."""
+        Calculator.calculate(self, atoms, properties, system_changes)
         self.results = {
-            "stress":np.random.rand(6)
+            "stress": np.random.rand(6)
         }
 
+
 db_name = "test_elastic.db"
+
+
 class TestElasticConstante(unittest.TestCase):
+    """Unit test case for elastic constants."""
+
     def test_no_throw(self):
+        """Test that code runs without throwing exceptions."""
         no_throw = True
         msg = ""
         try:
@@ -28,15 +38,18 @@ class TestElasticConstante(unittest.TestCase):
             el.prepare_db()
             for uid in range(1, 25):
                 el.run(uid, calc)
-            C = el.get()
-            B = el.bulk_modulus()
-            G = el.shear_modulus()
-            poisson = el.poisson_ratio()
+            el.get()
+            el.bulk_modulus()
+            el.shear_modulus()
+            el.poisson_ratio()
+            cell = atoms.get_cell()
+            ElasticConstants.get_strain(cell, cell, principal=True)
             os.remove(db_name)
         except Exception as exc:
-           msg = str(exc)
-           no_throw = False
+            msg = str(exc)
+            no_throw = False
         self.assertTrue(no_throw, msg=msg)
+
 
 if __name__ == "__main__":
     unittest.main()
