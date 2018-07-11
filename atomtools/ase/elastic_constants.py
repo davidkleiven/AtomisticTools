@@ -1,9 +1,13 @@
+"""Module for calculating elastic constants."""
 from ase.db import connect
 import numpy as np
 
+
 class ElasticConstants(object):
+    """Class that estimate the elastic parameters."""
+
     def __init__(self, atoms, db_name):
-        """Class that estimate the elastic parameters
+        """Class esitimating elastic constants.
 
         :param atoms: Relaxed atoms object
         :param db_name: Database name of structures that needs to be computed
@@ -17,7 +21,7 @@ class ElasticConstants(object):
         self.db_name = db_name
 
     def _to_voigt(self, tensor):
-        """Convert tensor to Voigt notation"""
+        """Convert tensor to Voigt notation."""
         voigt = np.zeros(6)
         voigt[0] = tensor[0, 0]
         voigt[1] = tensor[1, 1]
@@ -28,9 +32,8 @@ class ElasticConstants(object):
         return voigt
 
     def _compute_no_shear(self):
-        """Compute the energy for the non shear configurations"""
-
-        I = np.identity(3)
+        """Compute the energy for the non shear configurations."""
+        identity = np.identity(3)
         db = connect(self.db_name)
         strain_type = 0
         for delta in self.delta_no_shear:
@@ -39,19 +42,19 @@ class ElasticConstants(object):
                 atoms.set_calculator(self.atoms.get_calculator())
                 F = np.identity(3)
                 F[i, i] = 1 + delta
-                strain = 0.5*(F.T.dot(F) - I)
-                cell = atoms.get_cell() # NOTE: not transpose by purpose
+                strain = 0.5*(F.T.dot(F) - identity)
+                cell = atoms.get_cell()  # NOTE: not transpose by purpose
 
                 # Scale i-th component of each lattice vector
                 cell = cell.dot(F)
                 atoms.set_cell(cell, scale_atoms=True)
-                kvp = {"strain_type":strain_type}
+                kvp = {"strain_type": strain_type}
                 strain = self._to_voigt(strain)
-                db.write(atoms, data={"strain":strain}, key_value_pairs=kvp)
+                db.write(atoms, data={"strain": strain}, key_value_pairs=kvp)
 
     def _compute_shear(self):
-        """Compute the stresses for sheared configurations"""
-        I = np.identity(3)
+        """Compute the stresses for sheared configurations."""
+        identity = np.identity(3)
         element = [(0, 1), (0, 2), (1, 2)]
         db = connect(self.db_name)
         strain_type = 3
@@ -61,23 +64,26 @@ class ElasticConstants(object):
                 atoms.set_calculator(self.atoms.get_calculator())
                 F = np.identity(3)
                 F[e[0], e[1]] = delta
-                strain = 0.5*(F.T.dot(F) - I)
+                strain = 0.5*(F.T.dot(F) - identity)
                 cell = atoms.get_cell()
                 cell = cell.dot(F)
                 atoms.set_cell(cell, scale_atoms=True)
-                kvp = {"strain_type":strain_type}
+                kvp = {"strain_type": strain_type}
                 strain = self._to_voigt(strain)
-                db.write(atoms, data={"strain":strain}, key_value_pairs=kvp)
+                db.write(atoms, data={"strain": strain}, key_value_pairs=kvp)
                 strain_type += 1
 
     def prepare_db(self):
-        """Puts entries into the database which needs to be evaluated with
-        DFT"""
+        """Prepare database for DFT calculations.
+
+        Puts entries into the database which needs to be evaluated with
+        DFT
+        """
         self._compute_no_shear()
         self._compute_shear()
 
     def run(self, uid, calc):
-        """Run one job"""
+        """Run one job."""
         db = connect(self.db_name)
         row = db.get(id=uid)
         strain = row.data["strain"]
@@ -86,11 +92,11 @@ class ElasticConstants(object):
         atoms.set_calculator(calc)
         stress = atoms.get_stress()
         del db[uid]
-        db.write(atoms, data={"stress":stress, "strain":strain},
+        db.write(atoms, data={"stress": stress, "strain": strain},
                  key_value_pairs=kvp)
 
     def get(self, select_cond=[]):
-        """Computes the elastic properties"""
+        """Compute the elastic properties."""
         db = connect(self.db_name)
         self.data = []
         for row in db.select():
@@ -109,11 +115,11 @@ class ElasticConstants(object):
 
     @property
     def compliance_tensor(self):
-        """Returns the compliance tensor"""
+        """Return the compliance tensor."""
         return np.linalg.inv(self.elastic_tensor)
 
     def _bulk_mod_voigt(self):
-        """Bulk modulus by the Voigt average"""
+        """Bulk modulus by the Voigt average."""
         C = self.elastic_tensor
         Kv = C[0, 0] + C[1, 1] + C[2, 2]
         Kv += 2.0*(C[0, 1] + C[1, 2] + C[2, 0])
@@ -121,7 +127,7 @@ class ElasticConstants(object):
         return Kv
 
     def _bulk_mode_reuss(self):
-        """Bulk modulus by the reuss average"""
+        """Bulk modulus by the reuss average."""
         S = self.compliance_tensor
         inv_KR = S[0, 0] + S[1, 1] + S[2, 2]
         inv_KR += 2.0*(S[0, 1] + S[1, 2] + S[2, 0])
@@ -129,7 +135,7 @@ class ElasticConstants(object):
         return kR
 
     def _shear_mod_voigt(self):
-        """Shear modulus by Voigt average"""
+        """Shear modulus by Voigt average."""
         C = self.elastic_tensor
         Gv = C[0, 0] + C[1, 1] + C[2, 2]
         Gv -= (C[0, 1] + C[1, 2] + C[2, 0])
@@ -137,7 +143,7 @@ class ElasticConstants(object):
         return Gv/15.0
 
     def _shear_mod_reuss(self):
-        """Shear modulus by Reuss average"""
+        """Shear modulus by Reuss average."""
         S = self.compliance_tensor
         inv_Gr = 4.0*(S[0, 0] + S[1, 1] + S[2, 2])
         inv_Gr -= 4.0*(S[0, 1] + S[1, 2] + S[2, 0])
@@ -146,7 +152,7 @@ class ElasticConstants(object):
         return Gr/15.0
 
     def shear_modulus(self, mode="VRH"):
-        """Compute the shear modulus"""
+        """Compute the shear modulus."""
         allowed_modes = ["VRH", "V", "R"]
         if mode not in allowed_modes:
             raise ValueError("Mode has to be one of {}".format(allowed_modes))
@@ -161,7 +167,7 @@ class ElasticConstants(object):
         return 0.5*(Gv + Gr)
 
     def bulk_modulus(self, mode="VRH"):
-        """Computes the bulk modulus"""
+        """Compute the bulk modulus."""
         allowed_modes = ["VRH", "V", "R"]
         if mode not in allowed_modes:
             raise ValueError("Mode has to be one of {}".format(allowed_modes))
@@ -175,7 +181,7 @@ class ElasticConstants(object):
         return 0.5*(Kv + Kr)
 
     def poisson_ratio(self):
-        """Compute the isotropic Poisson ratio"""
+        """Compute the isotropic Poisson ratio."""
         K_vrh = self.bulk_modulus(mode="VRH")
         G_vrh = self.shear_modulus(mode="VRH")
         return (3.0*K_vrh - 2.0*G_vrh)/(6.0*K_vrh + 2.0*G_vrh)
