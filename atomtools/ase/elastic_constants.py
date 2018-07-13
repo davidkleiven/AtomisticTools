@@ -180,6 +180,12 @@ class ElasticConstants(object):
         Kr = self._bulk_mode_reuss()
         return 0.5*(Kv + Kr)
 
+    def youngs_modulus(self, mode="VRH"):
+        """Compute Young's modulus."""
+        B = self.bulk_modulus(mode=mode)
+        return 3.0*B*(1.0 - 2.0*self.poisson_ratio)
+
+    @property
     def poisson_ratio(self):
         """Compute the isotropic Poisson ratio."""
         K_vrh = self.bulk_modulus(mode="VRH")
@@ -208,4 +214,4 @@ class ElasticConstants(object):
         if not principal:
             return strain
 
-        return np.linalg.eigh(strain)
+        return np.linalg.eigvalsh(strain)
