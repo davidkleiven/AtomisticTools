@@ -41,9 +41,10 @@ class TestElasticConstante(unittest.TestCase):
             el.get()
             el.bulk_modulus()
             el.shear_modulus()
-            el.poisson_ratio()
+            el.poisson_ratio
             cell = atoms.get_cell()
             ElasticConstants.get_strain(cell, cell, principal=True)
+            el.isotropic_elastic_tensor
             os.remove(db_name)
         except Exception as exc:
             msg = str(exc)

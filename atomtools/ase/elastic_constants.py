@@ -116,10 +116,34 @@ class ElasticConstants(object):
     @property
     def compliance_tensor(self):
         """Return the compliance tensor."""
+        if self.elastic_tensor is None:
+            msg = "Elastic tensor not computed."
+            msg += "Call get() method first."
+            raise ValueError(msg)
         return np.linalg.inv(self.elastic_tensor)
+
+    @property
+    def isotropic_elastic_tensor(self):
+        """Return the isotropic elastic tensor.
+        Uses the bulk modulus and the poisson ratio obtained from the
+        general tensor
+        """
+        K = self._bulk_mod_voigt()
+        mu = self.poisson_ratio
+        tensor = np.zeros((6, 6))
+        tensor[0, 0] = tensor[1, 1] = tensor[2, 2] = K + 4.0*mu/3.0
+        tensor[3, 3] = tensor[4, 4] = tensor[5, 5] = mu
+        tensor[0, 1] = tensor[0, 2] = K - 2.0 * mu/3.0
+        tensor[1, 0] = tensor[1, 2] = K - 2.0 * mu/3.0
+        tensor[2, 0] = tensor[2, 1] = K - 2.0 * mu/3.0
+        return tensor
 
     def _bulk_mod_voigt(self):
         """Bulk modulus by the Voigt average."""
+        if self.elastic_tensor is None:
+            msg = "Elastic tensor not computed."
+            msg += "Call get() method first."
+            raise ValueError(msg)
         C = self.elastic_tensor
         Kv = C[0, 0] + C[1, 1] + C[2, 2]
         Kv += 2.0*(C[0, 1] + C[1, 2] + C[2, 0])
@@ -136,6 +160,10 @@ class ElasticConstants(object):
 
     def _shear_mod_voigt(self):
         """Shear modulus by Voigt average."""
+        if self.elastic_tensor is None:
+            msg = "Elastic tensor not computed."
+            msg += "Call get() method first."
+            raise ValueError(msg)
         C = self.elastic_tensor
         Gv = C[0, 0] + C[1, 1] + C[2, 2]
         Gv -= (C[0, 1] + C[1, 2] + C[2, 0])
