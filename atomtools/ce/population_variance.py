@@ -1,4 +1,4 @@
-from cemc.wanglandau.ce_calculator import CE
+from cemc import CE
 from ase.ce.corrFunc import CorrFunction
 import numpy as np
 import time

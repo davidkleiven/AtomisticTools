@@ -1,3 +1,3 @@
 # Empty file
-from redlich_kister import RedlichKister
-from birch_murnagan import BirschMurnagan
+from atomtools.eos.redlich_kister import RedlichKister
+from atomtools.eos.birch_murnagan import BirschMurnagan

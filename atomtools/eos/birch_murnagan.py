@@ -1,4 +1,4 @@
-from equation_of_state import EquationOfState
+from atomtools.eos.equation_of_state import EquationOfState
 import numpy as np
 
 class BirschMurnagan( EquationOfState ):

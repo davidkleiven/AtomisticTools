@@ -14,7 +14,7 @@ class ECIPlotter( object ):
         eci_names = {}
         eci_values = {}
 
-        for key,value in self.eci.iteritems():
+        for key,value in self.eci.items():
             size = int(key[1])
             extent =  cluster_dia_from_name(key)
             if ( size in eci_names.keys() ):
@@ -27,7 +27,7 @@ class ECIPlotter( object ):
                 extents[size] = [extent]
 
         # Within each size sort on absolute value
-        for key,value in eci_values.iteritems():
+        for key,value in eci_values.items():
             indx_srt = np.argsort(np.abs(extents[key]))
             new_list = [value[indx] for indx in indx_srt]
             eci_values[key] = new_list
@@ -50,7 +50,7 @@ class ECIPlotter( object ):
         prev = 0
         all_keys = []
         all_indx = []
-        for key,value in eci_vals.iteritems():
+        for key,value in eci_vals.items():
             all_keys += eci_names[key]
             indx = np.arange(prev,prev+len(value) )
             all_indx += list(indx)
