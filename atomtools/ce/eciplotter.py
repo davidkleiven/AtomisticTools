@@ -1,9 +1,18 @@
 import numpy as np
 from matplotlib import pyplot as plt
 
-class ECIPlotter( object ):
-    def __init__( self, eci ):
+class ECIPlotter(object):
+    def __init__(self, eci, naming="raw"):
+        allowed_namings = ["raw", "normalized"]
         self.eci = eci
+        if naming not in allowed_namings:
+            raise ValueError("Naming has to be one of {}".format(
+                allowed_namings))
+        self.naming = naming
+        self._rotation = {
+            "raw": "vertical",
+            "normalized": "horizontal"
+        }
 
     def sort_on_cluster_size( self ):
         """
@@ -50,22 +59,43 @@ class ECIPlotter( object ):
         prev = 0
         all_keys = []
         all_indx = []
-        for key,value in eci_vals.items():
+        for key, value in eci_vals.items():
             all_keys += eci_names[key]
-            indx = np.arange(prev,prev+len(value) )
+            indx = np.arange(prev,prev+len(value))
             all_indx += list(indx)
-            ax.bar( indx, value, label=labels[key] )
-            prev = indx[-1]+1
+            ax.bar(indx, value, label=labels[key])
+            prev = indx[-1]+2
         ax.legend( loc="best", frameon=False )
         ax.axhline(0.0, color="black", linewidth=0.5, ls="--")
         ax.set_xticklabels([])
         ax.set_ylabel( "ECI (eV/atom)" )
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
-        if ( show_names ):
-            ax.set_xticks( all_indx )
-            ax.set_xticklabels( all_keys, rotation="vertical"  )
+        if show_names:
+            ax.set_xticks(all_indx)
+            names = self._get_names(all_keys)
+            ax.set_xticklabels(names, rotation=self._rotation[self.naming])
+            if self.naming == "normalized":
+                ax.set_xlabel("$d/r_{nn}")
         return fig
+
+    def _get_names(self, raw_names):
+        """Return proper names."""
+        if self.naming == "raw":
+            return raw_names
+        elif self.naming == "normalized":
+            diameters = []
+            names = []
+            for name in raw_names:
+                dia = cluster_dia_from_name(name)
+                if dia > 0.01:
+                    diameters.append(dia)
+                else:
+                    names.append(0)
+            min_dia = np.min(diameters)
+            names += [np.round(dia/min_dia, 2) for dia in diameters]
+            return names
+
 
 def cluster_dia_from_name( cname ):
     if ( int(cname[1]) <= 1 ):
