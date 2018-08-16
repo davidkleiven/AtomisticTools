@@ -2,7 +2,7 @@
 import glob
 import sys
 from ase.io import write
-import GPAW as gp
+import gpaw as gp
 
 
 def main(folder):
