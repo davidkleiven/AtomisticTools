@@ -5,5 +5,6 @@ from atomtools.ce.evaluate_gaussian_eof_prior import EvaluateGaussianEOFPrior
 from atomtools.ce.evaluate_bootstrap import EvaluateBootstrap
 from atomtools.ce.cv_score_history import CVScoreHistory
 from atomtools.ce.chemical_potential_estimation import ChemicalPotentialEstimator
+from atomtools.ce.gaussian_mixture_clustering import GaussianMixtureClassifier
 
 __all__ = ["ECIPlotter","PopulationVariance","PhononEvalEOS"]
