@@ -55,26 +55,26 @@ class FilterCollapsed(object):
         self.orig_cf_matrix = deepcopy(evaluator.cf_matrix)
         self.orig_e_dft = deepcopy(self.evaluator.e_dft)
         self.names_removed = []
-
+        self.db_name = db_name
         if restart:
             self.remove_already_calculated()
 
     def filter_worst(self, alpha):
         """Remove the point that is furthest away."""
         E_dft = self.evaluator.e_dft
-        self.evaluator.get_eci()
+        self.evaluator.get_eci(alpha)
         E_pred = self.evaluator.cf_matrix.dot(self.evaluator.eci)
         diff = E_dft - E_pred
         min_indx = np.argmin(diff)
         name_removed = self._remove_indx(min_indx)
-        print("Removed name {}".format(name_removed))
         return name_removed
 
     def _remove_indx(self, indx):
         name_removed = self.evaluator.names[indx]
-        del self.evaluator.e_dft[indx]
+        self.evaluator.e_dft = np.delete(self.evaluator.e_dft, indx)
         del self.evaluator.names[indx]
-        np.delete(self.evaluator.cf_matrix, indx, axis=1)
+        self.evaluator.cf_matrix = \
+            np.delete(self.evaluator.cf_matrix, indx, axis=0)
         return name_removed
 
     def remove_already_calculated(self):
@@ -87,16 +87,38 @@ class FilterCollapsed(object):
             self._remove_indx(indx)
             self.names_removed.append(name)
 
-    def run(self, alpha, npoints=10):
+    def _find_new_best_alpha(self, alpha_min, alpha_max, num_alpha):
+        """Find the alpha value that is best."""
+        return self.evaluator.plot_CV(alpha_min, alpha_max,
+                                      num_alpha=num_alpha)
+
+    def run(self, alpha, n_points=10, update_alpha=True,
+            alpha_min=1E-5, alpha_max=1E-2, num_alpha=8):
         """Filter until converged."""
         db = dataset.connect("sqlite:///{}".format(self.db_name))
         tbl_stat = db["status"]
         tbl_unique_name = db["unique_names"]
-        for _ in range(npoints):
+        for _ in range(n_points):
             name = self.filter_worst(alpha)
-            cv = self.evaluator.cv_loo()
-            self.cv_loo.append(cv)
+            cv = self.evaluator.cv_loo(alpha) * 1000.0
             row = {"alpha": alpha, "cv": cv, "name": name}
             tbl_stat.insert(row)
             if name not in self.names_removed:
                 tbl_unique_name.insert({"name": name})
+            print("Removed: {}. New CV: {} meV/atom".format(name, cv))
+            if update_alpha:
+                alpha = self._find_new_best_alpha(alpha_min, alpha_max,
+                                                  num_alpha)
+
+    @staticmethod
+    def get_selection_condition(db_name, cv_score):
+        """Return a selection criteria based on the values to be left out."""
+        db = dataset.connect("sqlite:///{}".format(db_name))
+        tbl_name = db["unique_names"]
+        tbl_stat = db["status"]
+        scond = []
+        for row in tbl_name.find():
+            cv = tbl_stat.find_one(name=row["name"])["cv"]
+            if cv > cv_score:
+                scond.append(("name", "!=", row["name"]))
+        return scond
