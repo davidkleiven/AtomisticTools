@@ -7,12 +7,12 @@ class TestPopulationCovariance( unittest.TestCase ):
         no_throw = True
         try:
             from atomtools.ce import population_variance as pv
-            from ase.ce.settings import BulkCrystal
+            from ase.clease.settings import CEBulk
             conc_args = {
                 "conc_ratio_min_1":[[1,0]],
                 "conc_ratio_max_1":[[0,1]],
             }
-            BC = BulkCrystal( "fcc", 4.05, None, [4,4,4], 1, [["Al","Mg"]], conc_args, db_name, max_cluster_size=4, reconf_db=False)
+            BC = CEBulk( "fcc", 4.05, None, [4,4,4], 1, [["Al","Mg"]], conc_args, db_name, max_cluster_size=4, reconf_db=False)
             pvcov = pv.PopulationVariance(BC)
         except ImportError as exc:
             print (str(exc))

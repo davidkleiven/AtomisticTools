@@ -1,4 +1,4 @@
-from ase.ce.evaluate import Evaluate
+from ase.clease.evaluate import Evaluate
 import numpy as np
 
 class EvaluateDeviation( Evaluate ):

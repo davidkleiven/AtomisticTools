@@ -8,7 +8,7 @@ class GaussianMixtureClassifier(object):
     """
 
     def __init__(self, evaluator):
-        from ase.ce import Evaluate
+        from ase.clease import Evaluate
         from copy import deepcopy
         if not isinstance(evaluator, Evaluate):
             raise TypeError("evaluator has to be of type Evaluate")
@@ -47,7 +47,7 @@ class FilterCollapsed(object):
     """Class that attempts to filter out collapsed structures."""
 
     def __init__(self, evaluator, db_name="filter_db.db", restart=True):
-        from ase.ce import Evaluate
+        from ase.clease import Evaluate
         from copy import deepcopy
         if not isinstance(evaluator, Evaluate):
             raise TypeError("evaluator has to be of type Evaluate")

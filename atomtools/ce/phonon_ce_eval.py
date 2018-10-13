@@ -1,6 +1,6 @@
 try:
-    from ase.ce import evaluate as ev
-    from ase.ce.corrFunc import CorrFunction
+    from ase.clease import evaluate as ev
+    from ase.clease.corrFunc import CorrFunction
 except ImportError as exc:
     print ( str(exc) )
     print ("Warning! Cannot use the phonon_ce_eval functionality without ASE version that has Cluster Expansion!")

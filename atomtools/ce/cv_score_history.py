@@ -1,7 +1,7 @@
 import numpy as np
 from matplotlib import pyplot as plt
 from ase.db import connect
-from ase.ce import Evaluate
+from ase.clease import Evaluate
 
 class CVScoreHistory(object):
     def __init__( self, setting=None, penalization="L1", select_cond=None ):

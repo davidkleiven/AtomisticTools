@@ -1,4 +1,4 @@
-from ase.ce import Evaluate
+from ase.clease import Evaluate
 
 class EvaluateGaussianEOFPrior(Evaluate):
     def __init__( self, **kwargs ):

@@ -1,4 +1,4 @@
-from ase.ce import Evaluate
+from ase.clease import Evaluate
 import copy
 import numpy as np
 
