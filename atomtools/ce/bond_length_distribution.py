@@ -1,6 +1,61 @@
 from ase.db import connect
 import numpy as np
 
+def plot_normalized_bond_lengths(atoms_list, num_bonds=2, plot_args=[]):
+    """Create a plot with bond lengths of list.
+    
+    :param atoms_list: Nested list of atoms object
+    :type atoms_list: list of lists of Atoms objects
+    :param int num_bonds: Number of nearest neighbours to consider
+    :param plot_args: List of dictionary with plotting arguments
+        has to be the same length as atom_list
+        Example: {"alpha": 0.5, "marker": "s"}
+    """
+    from matplotlib import pyplot as plt
+    data = []
+    for i, atom_grp in enumerate(atoms_list):
+        data.append({})
+        for atom in atom_grp:
+            b_length = BondLengthDistribution(atom, num_bonds=num_bonds)
+            new_data = b_length.calculate_bond_lengths(normalize_by_mean=True)
+            for k, v in new_data:
+                if k not in data[i].keys():
+                    data[k] = v
+                else:
+                    data[k] += v
+
+    assert len(plot_args) == len(atoms_list)
+    all_keys = []
+    for dset in data:
+        all_keys.append(list(dset.keys()))
+    all_keys = sorted(list(set(all_keys)))
+
+    num_figs = len(all_keys)
+    if num_figs < 3:
+        num_cols = num_figs
+        num_rows = 1
+    else:
+        num_cols = 3
+        num_rows = int(num_figs/num_cols)
+        if num_rows < float(num_figs)/num_cols:
+            num_rows += 1
+    fig, ax = plt.subplots(num_rows, num_cols)
+    
+    for plot_args, dset in zip(data, plot_args):
+        ax_count = 0
+        for k in all_keys:
+            if k not in dset.keys():
+                continue
+        if isinstance(ax, np.ndarray):
+            col = ax_count%num_cols
+            row = int(ax_count/num_cols)
+            current_ax = ax[row, col]
+        else:
+            current_ax = ax
+        current_ax.plot(dset[k], **plot_args)
+    return fig
+            
+
 class BondLengthDistribution(object):
     """Class for exploring how much bond lengths change."""
     def __init__(self, atoms, num_bonds=2):
@@ -41,7 +96,7 @@ class BondLengthDistribution(object):
                 dist_dict[key].append(dist)
         return dist_dict
 
-    def calculate_bond_lengths(self):
+    def calculate_bond_lengths(self, normalize_by_mean=False):
         """Calculate bond length changes."""
         self.bond_lengths = {}
         for ref_indx in range(len(self.atoms)):
@@ -51,11 +106,16 @@ class BondLengthDistribution(object):
                     self.bond_lengths[k] = v
                 else:
                     self.bond_lengths[k] += v
+        
+        if normalize_by_mean:
+            for k, v in self.bond_lengths:
+                self.bond_lengths[k] /= np.mean(v)
         return self.bond_lengths
 
-    def show_bond_lengths(self, show=False):
+    def show_bond_lengths(self, show=False, fig=None):
         """Create plots of the bond lengths."""
         from matplotlib import pyplot as plt
+
         num_figs = len(self.bond_lengths.keys())
         if num_figs < 3:
             num_cols = num_figs
