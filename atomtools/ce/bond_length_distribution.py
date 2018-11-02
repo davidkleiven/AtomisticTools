@@ -54,14 +54,57 @@ def plot_normalized_bond_lengths(atoms_list, num_bonds=2, plot_args=[]):
             current_ax = ax
         current_ax.plot(dset[k], **plot_args)
     return fig
-            
+
+
+def bond_lengths_score(init_struct, final_struct, num_bonds=2, show=False):
+    """Calculates a score based on the bond lengths."""    
+    b_init = BondLengthDistribution(init_struct, num_bonds=num_bonds)
+    b_lengths_init = b_init.calculate_bond_lengths(normalize_by_mean=True)
+
+    b_final = BondLengthDistribution(final_struct, num_bonds=num_bonds)
+    b_lengths_final = b_final.calculate_bond_lengths(normalize_by_mean=True)
+
+    # Calculate the cummulative distribution of the bond lengths
+    cumdist_init = {}
+    for k, v in b_lengths_init.items():
+        if np.allclose(v, 1.0):
+            raise ValueError("There is only one bond type in the initial structure. "
+                             "Maybe increase the number of bonds.")
+        cumdist_init[k] = {"x": np.sort(v), 
+                           "P": np.linspace(0.0, 1.0, len(v), endpoint=False)}
+    cumdist_final = {}
+    for k, v in b_lengths_final.items():
+        cumdist_final[k] = {"x": np.sort(v), 
+                            "P": np.linspace(0.0, 1.0, len(v), endpoint=False)}
+
+    colors = ['#8dd3c7','#ffffb3','#bebada','#fb8072','#80b1d3','#fdb462','#b3de69','#fccde5','#d9d9d9']
+    keys = list(cumdist_init.keys()) + list(cumdist_final.keys())
+    keys = list(set(keys))
+    if show:
+        from matplotlib import pyplot as plt
+        fig = plt.figure()
+        ax = fig.add_subplot(1, 1, 1)
+        count = 0
+        for k in keys:
+            if k in cumdist_init.keys() and k in cumdist_final.keys():
+                ax.plot(cumdist_init[k]["x"], cumdist_init[k]["P"], 
+                        linestyle="-", drawstyle="steps",
+                        color=colors[count%len(colors)])
+
+                ax.plot(cumdist_final[k]["x"], cumdist_final[k]["P"], 
+                        linestyle="--", drawstyle="steps", 
+                        color=colors[count%len(colors)])
+                count += 1
+        plt.show()
+
 
 class BondLengthDistribution(object):
     """Class for exploring how much bond lengths change."""
-    def __init__(self, atoms, num_bonds=2):
+    def __init__(self, atoms, num_bonds=2, exclude=["X"]):
         self.num_bonds = num_bonds
-        self.atoms = atoms
+        self.atoms = atoms.copy()
         self.bond_lengths = {}
+        self.exclude_symbs = exclude
 
     @staticmethod
     def symbs2key(symbs):
@@ -75,7 +118,19 @@ class BondLengthDistribution(object):
         indices.remove(ref_indx)
         dists = self.atoms.get_distances(ref_indx, indices, mic=True)
         srt_indx = np.argsort(dists)
-        closest_indices = [indices[srt_indx[i]] for i in range(self.num_bonds)]
+        closest_indices = []
+        
+        num_inserted = 0
+        for indx in srt_indx:
+            if self.atoms[indx].symbol in self.exclude_symbs:
+                continue
+            closest_indices.append(indx)
+            num_inserted += 1
+            if num_inserted >= self.num_bonds:
+                break
+        
+        if len(closest_indices) != self.num_bonds:
+            raise RuntimeError("Could not find the requested number of neigbours!")
 
         # Remove indices smaller than ref_indx
         filtered_closest_indx = []
@@ -108,7 +163,7 @@ class BondLengthDistribution(object):
                     self.bond_lengths[k] += v
         
         if normalize_by_mean:
-            for k, v in self.bond_lengths:
+            for k, v in self.bond_lengths.items():
                 self.bond_lengths[k] /= np.mean(v)
         return self.bond_lengths
 
