@@ -20,16 +20,16 @@ class ElasticConstants(object):
         self.elastic_tensor = None
         self.db_name = db_name
 
-    def _to_voigt(self, tensor):
-        """Convert tensor to Voigt notation."""
-        voigt = np.zeros(6)
-        voigt[0] = tensor[0, 0]
-        voigt[1] = tensor[1, 1]
-        voigt[2] = tensor[2, 2]
-        voigt[3] = tensor[1, 2]
-        voigt[4] = tensor[0, 2]
-        voigt[5] = tensor[0, 1]
-        return voigt
+    def _to_mandel(self, tensor):
+        """Convert tensor to mandel notation."""
+        mandel = np.zeros(6)
+        mandel[0] = tensor[0, 0]
+        mandel[1] = tensor[1, 1]
+        mandel[2] = tensor[2, 2]
+        mandel[3] = np.sqrt(2.0)*tensor[1, 2]
+        mandel[4] = np.sqrt(2.0)*tensor[0, 2]
+        mandel[5] = np.sqrt(2.0)*tensor[0, 1]
+        return mandel
 
     def _compute_no_shear(self):
         """Compute the energy for the non shear configurations."""
@@ -49,7 +49,7 @@ class ElasticConstants(object):
                 cell = cell.dot(F)
                 atoms.set_cell(cell, scale_atoms=True)
                 kvp = {"strain_type": strain_type}
-                strain = self._to_voigt(strain)
+                strain = self._to_mandel(strain)
                 db.write(atoms, data={"strain": strain}, key_value_pairs=kvp)
 
     def _compute_shear(self):
@@ -69,7 +69,7 @@ class ElasticConstants(object):
                 cell = cell.dot(F)
                 atoms.set_cell(cell, scale_atoms=True)
                 kvp = {"strain_type": strain_type}
-                strain = self._to_voigt(strain)
+                strain = self._to_mandel(strain)
                 db.write(atoms, data={"strain": strain}, key_value_pairs=kvp)
                 strain_type += 1
 
@@ -128,7 +128,7 @@ class ElasticConstants(object):
         Uses the bulk modulus and the poisson ratio obtained from the
         general tensor
         """
-        K = self._bulk_mod_voigt()
+        K = self._bulk_mod_mandel()
         mu = self.poisson_ratio
         tensor = np.zeros((6, 6))
         tensor[0, 0] = tensor[1, 1] = tensor[2, 2] = K + 4.0*mu/3.0
@@ -138,8 +138,8 @@ class ElasticConstants(object):
         tensor[2, 0] = tensor[2, 1] = K - 2.0 * mu/3.0
         return tensor
 
-    def _bulk_mod_voigt(self):
-        """Bulk modulus by the Voigt average."""
+    def _bulk_mod_mandel(self):
+        """Bulk modulus by the mandel average."""
         if self.elastic_tensor is None:
             msg = "Elastic tensor not computed."
             msg += "Call get() method first."
@@ -158,8 +158,8 @@ class ElasticConstants(object):
         kR = 1.0/inv_KR
         return kR
 
-    def _shear_mod_voigt(self):
-        """Shear modulus by Voigt average."""
+    def _shear_mod_mandel(self):
+        """Shear modulus by mandel average."""
         if self.elastic_tensor is None:
             msg = "Elastic tensor not computed."
             msg += "Call get() method first."
@@ -186,11 +186,11 @@ class ElasticConstants(object):
             raise ValueError("Mode has to be one of {}".format(allowed_modes))
 
         if mode == "V":
-            return self._shear_mod_voigt()
+            return self._shear_mod_mandel()
         if mode == "R":
             return self._shear_mod_reuss()
 
-        Gv = self._shear_mod_voigt()
+        Gv = self._shear_mod_mandel()
         Gr = self._shear_mod_reuss()
         return 0.5*(Gv + Gr)
 
@@ -200,11 +200,11 @@ class ElasticConstants(object):
         if mode not in allowed_modes:
             raise ValueError("Mode has to be one of {}".format(allowed_modes))
         if mode == "V":
-            return self._bulk_mod_voigt()
+            return self._bulk_mod_mandel()
         elif mode == "R":
             return self._bulk_mode_reuss()
 
-        Kv = self._bulk_mod_voigt()
+        Kv = self._bulk_mod_mandel()
         Kr = self._bulk_mode_reuss()
         return 0.5*(Kv + Kr)
 
