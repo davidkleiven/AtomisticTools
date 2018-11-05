@@ -51,6 +51,16 @@ class TestElasticConstante(unittest.TestCase):
             no_throw = False
         self.assertTrue(no_throw, msg=msg)
 
+    def test_mandel_conversion_rank4(self):
+        atoms = bulk("Al")
+        calc = DummyCalc()
+        atoms.set_calculator(calc)
+        el = ElasticConstants(atoms, db_name)
+
+        tensor = np.random.rand(6, 6)
+        full = el._to_full_rank4(tensor)
+        tensor_orig = el._to_mandel_rank4(full)
+        self.assertTrue(np.allclose(tensor, tensor_orig))
 
 if __name__ == "__main__":
     unittest.main()

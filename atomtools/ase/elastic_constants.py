@@ -31,6 +31,59 @@ class ElasticConstants(object):
         mandel[5] = np.sqrt(2.0)*tensor[0, 1]
         return mandel
 
+    def _to_mandel_rank4(self, tensor):
+        """Convert rank 4 tensor to mandel notation."""
+        from itertools import product
+        out = np.zeros((6, 6))
+        mandel_lut = {
+            (0, 0): 0,
+            (1, 1): 1,
+            (2, 2): 2,
+            (1, 2): 3,
+            (0, 2): 4,
+            (0, 1): 5
+        }
+        for ind in product([0, 1, 2], repeat=4):
+            if ind[1] < ind[0] or ind[3] < ind[2]:
+                continue
+            row = mandel_lut[(ind[0], ind[1])]
+            col = mandel_lut[(ind[2], ind[3])]
+
+            if ind[0] != ind[1] and ind[2] != ind[3]:
+                value = 2.0*tensor[ind[0], ind[1], ind[2], ind[3]]
+            elif ind[0] != ind[1]:
+                value = np.sqrt(2.0)*tensor[ind[0], ind[1], ind[2], ind[3]]
+            elif ind[2] != ind[3]:
+                value = np.sqrt(2.0)*tensor[ind[0], ind[1], ind[2], ind[3]]
+            else:
+                value = tensor[ind[0], ind[1], ind[2], ind[3]]
+            out[row, col] = value
+        return out
+
+    def _to_full_rank4(self, mandel_tensor):
+        """Convert Mandel representation to full tensor."""
+        from itertools import product
+        out = np.zeros((3, 3, 3, 3))
+        mandel_lut = [(0, 0), (1, 1), (2, 2), 
+                      (1, 2), (0, 2), (0, 1)]
+        
+        for ind in product(range(6), repeat=2):
+            if ind[0] > 2 and ind[1] > 2:
+                value = mandel_tensor[ind[0], ind[1]]/2.0
+            elif ind[0] > 2 or ind[1] > 2:
+                value = mandel_tensor[ind[0], ind[1]]/np.sqrt(2.0)
+            else:
+                value = mandel_tensor[ind[0], ind[1]]
+
+            row = mandel_lut[ind[0]]
+            col = mandel_lut[ind[1]]
+
+            out[row[0], row[1], col[0], col[1]] = value
+            out[row[0], row[1], col[1], col[0]] = value
+            out[row[1], row[0], col[1], col[0]] = value
+            out[row[1], row[0], col[0], col[1]] = value
+        return out
+
     def _compute_no_shear(self):
         """Compute the energy for the non shear configurations."""
         identity = np.identity(3)
@@ -95,14 +148,22 @@ class ElasticConstants(object):
         db.write(atoms, data={"stress": stress, "strain": strain},
                  key_value_pairs=kvp)
 
-    def get(self, select_cond=[]):
+    def get(self, select_cond=[], strains=None, stresses=None, sp_group=1):
         """Compute the elastic properties."""
-        db = connect(self.db_name)
-        self.data = []
-        for row in db.select():
-            d = row.data
-            d["strain_type"] = row.key_value_pairs["strain_type"]
-            self.data.append(d)
+        if strains is not None and stresses is not None:
+            for eps, sigma in zip(strains, stresses):
+                d = {
+                    "strain": eps,
+                    "stress": sigma
+                }
+                self.data.append(d)
+        else:
+            db = connect(self.db_name)
+            self.data = []
+            for row in db.select():
+                d = row.data
+                d["strain_type"] = row.key_value_pairs["strain_type"]
+                self.data.append(d)
 
         stress_matrix = np.zeros((6, len(self.data)))
         strain_matrix = np.zeros_like(stress_matrix)
@@ -110,8 +171,15 @@ class ElasticConstants(object):
             stress_matrix[:, i] = d["stress"]
             strain_matrix[:, i] = d["strain"]
 
-        self.elastic_tensor = stress_matrix.dot(np.linalg.pinv(strain_matrix))
+        #self.elastic_tensor = stress_matrix.dot(np.linalg.pinv(strain_matrix))
+        # self.elastic_tensor = np.linalg.lstsq(strain_matrix, stress_matrix)
+        prec = np.linalg.inv(strain_matrix.dot(strain_matrix.T))
+        self.elastic_tensor = prec.dot(stress_matrix.dot(strain_matrix.T))
         return self.elastic_tensor
+
+    def _symmetrize(self, sp_group=1):
+        if sp_group == 1:
+            return
 
     @property
     def compliance_tensor(self):
