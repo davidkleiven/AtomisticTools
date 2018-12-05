@@ -148,7 +148,7 @@ class ElasticConstants(object):
         db.write(atoms, data={"stress": stress, "strain": strain},
                  key_value_pairs=kvp)
 
-    def get(self, select_cond=[], strains=None, stresses=None, spg=1):
+    def get(self, select_cond=[], strains=None, stresses=None, spg=1, perm="xyz"):
         """Compute the elastic properties."""
         if strains is not None and stresses is not None:
             for eps, sigma in zip(strains, stresses):
@@ -175,18 +175,24 @@ class ElasticConstants(object):
         # self.elastic_tensor = np.linalg.lstsq(strain_matrix, stress_matrix)
         prec = np.linalg.inv(strain_matrix.dot(strain_matrix.T))
         self.elastic_tensor = prec.dot(stress_matrix.dot(strain_matrix.T))
-        self._symmetrize_elastic_tensor(spg=spg)
+        self._symmetrize_elastic_tensor(spg=spg, perm=perm)
         return self.elastic_tensor
 
-    def _symmetrize_elastic_tensor(self, spg=1):
+    def _symmetrize_elastic_tensor(self, spg=1, perm="xyz"):
         if spg == 1:
             return
+        permut_lut = {
+            "xyz": 0,
+            "zxy": -1,
+            "yzx": -2
+        }
         from ase.spacegroup import Spacegroup
         spg = Spacegroup(spg)
         sym_op = spg.get_rotations()
         full = self._to_full_rank4(self.elastic_tensor)
         new_tensor = np.zeros((3, 3, 3, 3))
         for op in sym_op:
+            op = np.roll(op, permut_lut[perm], (0, 1))
             avg_tensor = np.zeros((3, 3, 3, 3))
             avg_tensor = np.einsum("pl,ijkl->ijkp", op, full)
             avg_tensor = np.einsum("ok,ijkp->ijop", op, avg_tensor)
