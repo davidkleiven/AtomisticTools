@@ -2,18 +2,22 @@
 r_sphere = 100.0;
 
 // Major axis of ellipsoid
-a = 70.0;
-b = 50.0;
-c = 20.0;
+a = 10.0;
+b = 5.0;
+c = 2.0;
+
+// Define mesh control parameters
+lc_inc = 0.1; // Lattice control for inclusion
+lc_sph = 5.0; // Lattice control for outer sphere
 
 // Define points needed for a sphere
-Point(1) = {0, 0, 0};
-Point(2) = {r_sphere, 0, 0};
-Point(3) = {0, r_sphere, 0};
-Point(4) = {-r_sphere, 0, 0};
-Point(5) = {0, -r_sphere, 0};
-Point(6) = {0, 0, r_sphere};
-Point(7) = {0, 0, -r_sphere};
+Point(1) = {0, 0, 0, lc_inc};
+Point(2) = {r_sphere, 0, 0, lc_sph};
+Point(3) = {0, r_sphere, 0, lc_sph};
+Point(4) = {-r_sphere, 0, 0, lc_sph};
+Point(5) = {0, -r_sphere, 0, lc_sph};
+Point(6) = {0, 0, r_sphere, lc_sph};
+Point(7) = {0, 0, -r_sphere, lc_sph};
 
 // Circle in xy plane
 Circle(1) = {2, 1, 3};
@@ -59,12 +63,12 @@ Line Loop(27) = {4, -8, 12};
 Ruled Surface(28) = {27};
 
 // Define points for ellipsoid start number on 100
-Point(101) = {a, 0, 0};
-Point(102) = {-a, 0, 0};
-Point(103) = {0, b, 0};
-Point(104) = {0, -b, 0};
-Point(105) = {0, 0, c};
-Point(106) = {0, 0, -c};
+Point(101) = {a, 0, 0, lc_inc};
+Point(102) = {-a, 0, 0, lc_inc};
+Point(103) = {0, b, 0, lc_inc};
+Point(104) = {0, -b, 0, lc_inc};
+Point(105) = {0, 0, c, lc_inc};
+Point(106) = {0, 0, -c, lc_inc};
 
 // Create ellipse in xy plane
 Ellipsis(107) = {101, 1, 102, 103};
