@@ -8,5 +8,9 @@ from atomtools.ce.chemical_potential_estimation import ChemicalPotentialEstimato
 from atomtools.ce.gaussian_mixture_clustering import GaussianMixtureClassifier
 from atomtools.ce.gaussian_mixture_clustering import FilterCollapsed
 from atomtools.ce.bond_length_distribution import BondLengthDistribution
+from atomtools.ce.bond_length_distribution import plot_normalized_bond_lengths
+from atomtools.ce.bond_length_distribution import bond_lengths_score
+from atomtools.ce.distance_distribution import DistanceDistribution
+from atomtools.ce.filter_displacement import FilterDisplacements
 
 __all__ = ["ECIPlotter","PopulationVariance","PhononEvalEOS"]
