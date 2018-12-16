@@ -1,6 +1,11 @@
 // Radius of sphere
 r_sphere = 100.0;
 
+// Major axis of ellipsoid
+a = 70.0;
+b = 50.0;
+c = 20.0;
+
 // Define points needed for a sphere
 Point(1) = {0, 0, 0};
 Point(2) = {r_sphere, 0, 0};
@@ -53,7 +58,68 @@ Ruled Surface(26) = {25};
 Line Loop(27) = {4, -8, 12};
 Ruled Surface(28) = {27};
 
+// Define points for ellipsoid start number on 100
+Point(101) = {a, 0, 0};
+Point(102) = {-a, 0, 0};
+Point(103) = {0, b, 0};
+Point(104) = {0, -b, 0};
+Point(105) = {0, 0, c};
+Point(106) = {0, 0, -c};
+
+// Create ellipse in xy plane
+Ellipsis(107) = {101, 1, 102, 103};
+Ellipsis(108) = {102, 1, 101, 104};
+Ellipsis(109) = {101, 1, 102, 104};
+Ellipsis(110) = {102, 1, 101, 103};
+
+// Create ellipse in the xz plane
+Ellipsis(111) = {101, 1, 102, 105};
+Ellipsis(112) = {101, 1, 102, 106};
+Ellipsis(113) = {102, 1, 101, 105};
+Ellipsis(114) = {102, 1, 101, 106};
+
+// Create ellipse in the yz plane
+Ellipsis(115) = {103, 1, 104, 105};
+Ellipsis(116) = {103, 1, 104, 106};
+Ellipsis(117) = {104, 1, 103, 105};
+Ellipsis(118) = {104, 1, 103, 106};
+
+// Create surface of the ellipsoid
+Line Loop(119) = {107, 115, -111};
+Ruled Surface(120) = {119};
+
+Line Loop(121) = {107, 116, -112};
+Ruled Surface(122) = {121};
+
+Line Loop(123) = {108, 117, -113};
+Ruled Surface(124) = {123};
+
+Line Loop(125) = {108, 118, -114};
+Ruled Surface(126) = {125};
+
+Line Loop(127) = {109, 117, -111};
+Ruled Surface(128) = {127};
+
+Line Loop(129) = {109, 118, -112};
+Ruled Surface(130) = {129};
+
+Line Loop(131) = {110, 115, -113};
+Ruled Surface(132) = {131};
+
+Line Loop(133) = {110, 116, -114};
+Ruled Surface(134) = {133};
+ 
 // Create spherical solid
 Surface Loop(29) = {14, 16, 18, 20, 22, 24, 26, 28};
-Volume(30) = {29};
+
+// Create elliptical surface
+Surface Loop(135) = {120, 122, 124, 126, 128, 130, 132, 134};
+
+Volume(30) = {29, 135};
+Volume(136) = {135};
+
+// Add physical entities
+Physical Volume("matrix") = {30};
+Physical Volume("inclusion") = {136};
+Physical Surface("outer") = {29};
 
