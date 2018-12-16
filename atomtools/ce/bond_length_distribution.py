@@ -70,9 +70,12 @@ class BondLengthDistribution(object):
         ax_count = 0
         for k, v in self.bond_lengths.items():
             if isinstance(ax, np.ndarray):
-                col = ax_count%num_cols
-                row = int(ax_count/num_cols)
-                current_ax = ax[row, col]
+                if len(ax.shape) == 2:
+                    col = ax_count%num_cols
+                    row = int(ax_count/num_cols)
+                    current_ax = ax[row, col]
+                else:
+                    current_ax = ax[ax_count]
             else:
                 current_ax = ax
             current_ax.plot(v, "x")
