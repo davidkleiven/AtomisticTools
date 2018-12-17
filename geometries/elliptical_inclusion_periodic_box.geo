@@ -110,6 +110,9 @@ Volume(137) = {135, 200};
 Volume(136) = {135};
 
 // Create periodic surfaces
+Periodic Surface{135} = {139} Translate(-L_box, 0, 0);
+Periodic Surface {137} = {140} Translate(0, L_box, 0); // y-direction
+Periodic Surface {136} = {138} Translate(0, 0, L_box); // z-direction
 
 // Add physical entities
 Physical Volume("matrix") = {137};
