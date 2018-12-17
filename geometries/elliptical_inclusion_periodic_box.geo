@@ -7,8 +7,8 @@ b = 5.0;
 c = 2.0;
 
 // Define mesh control parameters
-lc_inc = 0.1; // Lattice control for inclusion
-lc_box = 5.0; // Lattice control for outer sphere
+lc_inc = 1.0; // Lattice control for inclusion
+lc_box = 3.0; // Lattice control for outer sphere
 
 // Define point at origin
 Point(1) = {0, 0, 0, lc_inc};

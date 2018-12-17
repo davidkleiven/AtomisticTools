@@ -6,3 +6,4 @@ from atomtools.ase.rotate_atoms_and_cell import rotate_atoms_and_cell, rotate_cr
 from atomtools.ase.constituent_strain import ConstituentStrain
 from atomtools.ase.elastic_constants import ElasticConstants
 from atomtools.ase.autocorrelation_function import AutocorrelationFunction
+from atomtools.ase.displacement_field import DisplacementField
