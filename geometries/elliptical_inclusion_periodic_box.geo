@@ -79,28 +79,28 @@ Ellipsis(118) = {104, 1, 103, 106};
 
 // Create surface of the ellipsoid
 Line Loop(119) = {107, 115, -111};
-Ruled Surface(120) = {119};
+Surface(120) = {119};
 
 Line Loop(121) = {107, 116, -112};
-Ruled Surface(122) = {121};
+Surface(122) = {121};
 
 Line Loop(123) = {108, 117, -113};
-Ruled Surface(124) = {123};
+Surface(124) = {123};
 
 Line Loop(125) = {108, 118, -114};
-Ruled Surface(126) = {125};
+Surface(126) = {125};
 
 Line Loop(127) = {109, 117, -111};
-Ruled Surface(128) = {127};
+Surface(128) = {127};
 
 Line Loop(129) = {109, 118, -112};
-Ruled Surface(130) = {129};
+Surface(130) = {129};
 
 Line Loop(131) = {110, 115, -113};
-Ruled Surface(132) = {131};
+Surface(132) = {131};
 
 Line Loop(133) = {110, 116, -114};
-Ruled Surface(134) = {133};
+Surface(134) = {133};
 
 // Create elliptical surface
 Surface Loop(135) = {120, 122, 124, 126, 128, 130, 132, 134};
